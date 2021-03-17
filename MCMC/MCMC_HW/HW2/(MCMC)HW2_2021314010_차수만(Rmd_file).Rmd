@@ -42,9 +42,9 @@ Using polar method, X and Y can be expressed as $rcos\theta, rsin\theta$ respect
 $$x^2+y^2 = r^2cos^2\theta + r^2sin^2\theta = r^2$$
     
 Therefore, $f(x,y)$ is transformed to $f(r,\theta)$
-$$f(r, \theta) = \frac{1}{2\pi}e^{-\frac{r^2}{2}}$$
+$$f(r, \theta) = \frac{1}{2\pi}\times\frac{1}{2}e^{-\frac{r^2}{2}}$$
     
-And we know that $\frac{1}{2\pi} \sim Unif(0,2\pi)$ and $r^2 \sim exp(\frac{1}{2})$
+And we can think that $\frac{1}{2\pi}$ as the distribution of $\theta$ and it follows $Unif(0,2\pi)$ and $r^2 \sim exp(\frac{1}{2})$
     
 By inverse-CDF method, let $u \sim Unif(0,1)$. Then we can the result below.
 $$\theta = 2\pi u,\quad r = \sqrt{-2logu}$$
@@ -64,10 +64,7 @@ theta = 2*pi*u2
 x = r*cos(theta)
 y = r*sin(theta)
 
-
-par(mfrow=c(1,3))
-hist(x, nclass=100)
-hist(y, nclass=100)
+# histogram
 hist(c(x,y), nclass=100, main="Sampling result using polar method")
 ```
 
