@@ -1,0 +1,232 @@
+---
+title: "DL_HW2"
+author: "Suman"
+date: '2021 4 13 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(MASS)
+
+sigmoid <- function(x) 1 / (1+exp(-x))
+d.sigmoid <- function(x) x*(1-x)
+```
+```{r}
+# parameters
+## WHen weights are zero vectors, it causes problems
+# W1 = matrix(c(0,0))
+# W2 = matrix(c(0,0))
+# W3 = matrix(c(0,0))
+# b1 = c(0)
+# b2 = c(0,0)
+# b3 = c(0)
+
+# Xavier initialization 
+W1 = matrix(rnorm(2, 0, sqrt(2)))
+W2 = matrix(c(rnorm(2,0,sqrt(4))),1, 2)
+W3 = matrix(rnorm(2,0,sqrt(2)))
+b1 = c(0)
+b2 = c(0,0)
+b3 = c(0)
+
+# Init
+cost = Inf
+epsilon = 0.01
+lr = 0.08
+
+
+for(i in 1:1000){
+    # 1st layer
+    s1 = t(W1)%*%x - b1
+    x1 = sigmoid(s1)
+    
+    # 2nd layer
+    s2 = t(W2)%*%x1 - b2
+    x2 = sigmoid(s2)
+    
+    # 3rd layer(output)
+    s3 = t(W3)%*%x2 - b3
+    y = sigmoid(s3)
+    
+    cost = c(cost, sum((y-z)^2))
+    
+    # Backpropagation
+    d3 = (y-z)*d.sigmoid(sigmoid(s3))
+    W3 = W3 - lr*x2%*%t(d3)
+    b3 = b3 + lr*d3
+    
+    d2 = (W3%*%d3)*d.sigmoid(sigmoid(s2))
+    W2 = W2 - lr*x1%*%t(d2)
+    b2 = b2 + lr*d2
+    # 
+    # d1 = (W2%*%d2)*d.sigmoid(sigmoid(s1))
+    # W1 = W1 - lr*x%*%t(d1)
+    # b1 = b1 + lr*d1
+}
+# z = rnorm(10^5, mean=y, sd = 0.001)
+# sum((y-z)^2)
+# plot
+par(mfrow=c(1,2))
+hist(y, nclass=100, main="Histogram of output")
+hist(z, nclass=100, main="Histogram of target")
+
+par(mfrow=c(1,1))
+plot(y, z, main="scatterplot of yi and zi")
+
+xvals <- seq(1, 1000)
+iters <- xvals[c(-1)]
+plot(iters, cost[iters], type="l", geom="line", main="LSE", xlab="iteration", col="red")
+```
+
+
+
+```{r}
+x.mu = c(0,0)
+x.sigma = matrix(c(1,0,0,1),2,2)
+x = t(matrix(c(mvrnorm(2*10^4,x.mu,x.sigma)),10000,2))
+
+# parameters
+W1 = matrix(c(1,1))
+W2 = matrix(c(-2,1), 1, 2)
+W3 = matrix(c(1,-1))
+b1 = c(-1/2)
+b2 = c(3/2,-5/2)
+b3 = c(1)
+
+# 1st layer
+s1 = t(W1)%*%x - b1
+x1 = sigmoid(s1)
+
+# 2nd layer
+s2 = t(W2)%*%x1 - b2
+x2 = sigmoid(s2)
+
+# 3rd layer(output)
+s3 = t(W3)%*%x2 - b3
+y = sigmoid(s3)
+
+z = rnorm(10^4, mean=y, sd = 0.001)
+
+par(mfrow=c(1,2))
+hist(y, nclass=100, main="Histogram of output")
+hist(z, nclass=100, main="Histogram of target")
+
+par(mfrow=c(1,1))
+plot(y, z, main="scatterplot of yi and zi")
+```
+
+
+
+
+
+```{r learning weights and biases}
+# Xavier initialization 
+
+# W.now = matrix(runif(2,-sqrt(6/3),sqrt(6/3)))
+# A.now = matrix(runif(2,-sqrt(6/3),sqrt(6/3)))
+# B.now = matrix(runif(2,-sqrt(6/3),sqrt(6/3)))
+x.mu = c(0,0)
+x.sigma = matrix(c(1,0,0,1),2,2)
+x = t(matrix(c(mvrnorm(2*10^4,x.mu,x.sigma)),10000,2))
+
+W.now = matrix(rnorm(2,0,sqrt(4)),2)
+A.now = matrix(rnorm(2,0,sqrt(2)),2)
+B.now = matrix(rnorm(2,0,sqrt(4)),2)
+b1.now = 0
+b2.now = matrix(c(0,0))
+b.now = 0
+lr = 0.01
+iters = 0
+
+# 1st layer
+s1 = W.now[1, ]*x[1, ] + W.now[2, ]*x[2, ] - b1.now
+x1 = sigmoid(s1)
+
+# 2nd layer
+s2_1 = A.now[1,]*x1 - b2.now[1, ]
+s2_2 = A.now[2,]*x1 - b2.now[2, ]
+x2_1 = sigmoid(s2_1)
+x2_2 = sigmoid(s2_2)
+
+# 3rd layer(output)
+s3 = B.now[1, ]*x2_1 + B.now[2, ]*x2_2 - b.now
+yi = sigmoid(s3)
+
+z = rnorm(10^4, mean=yi, sd=0.001)
+cost = sum((yi-z)^2)
+
+# update
+for(iter in 1:1000){
+    # forward propagation 
+    # 1st layer
+    s1 = W.now[1, ]*x[1, ] + W.now[2, ]*x[2, ] - b1.now
+    x1 = sigmoid(s1)
+    
+    # 2nd layer
+    s2_1 = A.now[1,]*x1 - b2.now[1, ]
+    s2_2 = A.now[2,]*x1 - b2.now[2, ]
+    x2_1 = sigmoid(s2_1)
+    x2_2 = sigmoid(s2_2)
+    
+    # 3rd layer(output)
+    s3 = B.now[1, ]*x2_1 + B.now[2, ]*x2_2 - b.now
+    yi = sigmoid(s3)
+
+    
+    # Back Propagation
+    cost = c(cost, sum((yi-z)^2))
+
+    # weight update
+    d3 = 2*(yi-z)*sigmoid(s3)*(1-sigmoid(s3))
+    d2_1 = d3*sigmoid(s2_1)*(1-sigmoid(s2_1))*B.now[1, ]
+    d2_2 = sigmoid(s2_2)*(1-sigmoid(s2_2))*B.now[2, ]*d3
+    d1 = d2_1*sigmoid(s1)*(1-sigmoid(s1))*A.now[1,] + d2_2*sigmoid(s1)*(1-sigmoid(s1))*A.now[2, ]
+
+    B1.next = B.now[1, ] - lr*sum(sigmoid(s2_1)*d3)
+    B2.next = B.now[2, ] - lr*sum(d3*sigmoid(s2_2))
+    # A1.next = A.now[1, ] - lr*d2_1*x1
+    # A2.next = A.now[2, ] - lr*d2_2*x1
+    # W1.next = W.now[1, ] - lr*d1*x[1,]
+    # W2.next = W.now[2, ] - lr*d1*x[2,]
+    # b.next = b.now + lr*d3
+    # b2_1.next = b2.now[1, ] + lr*d2_1
+    # b2_2.next = b2.now[2, ] + lr*d2_2
+    # b1.next = b1.now + lr*d1
+    A1.next = A.now[1, ] - lr*sum(d3*B.now[1,]*sigmoid(s2_1)*(1-sigmoid(s2_2))*sigmoid(s1))
+    A2.next = A.now[2, ] - lr*sum(d3*B.now[2,]*sigmoid(s2_2)*(1-sigmoid(s2_2))*sigmoid(s1))
+    W1.next = W.now[1, ] - lr*sum(d3*B.now[1,]*sigmoid(s2_1)*(1-sigmoid(s2_1))*sigmoid(s1)*(1-sigmoid(s1))*x[1, ])
+    W2.next = W.now[2, ] - lr*sum(d3*B.now[1,]*sigmoid(s2_2)*(1-sigmoid(s2_2))*sigmoid(s1)*(1-sigmoid(s1))*x[2, ])
+    b.next = b.now + lr*sum(d3)
+    b2_1.next = b2.now[1, ] + lr*sum(d3*B.now[1,]*sigmoid(s2_1)*(1-sigmoid(s2_2)))
+    b2_2.next = b2.now[2, ] + lr*sum(d3*B.now[2,]*sigmoid(s2_2)*(1-sigmoid(s2_2)))
+    b1.next = b1.now + lr*sum(d3*B.now[1,]*sigmoid(s2_1)*(1-sigmoid(s2_1))*sigmoid(s1)*(1-sigmoid(s1)))
+    
+    # B.now = matrix(c(B1.next, B2.next))
+    # A.now = matrix(c(A1.next, A2.next))
+    # W.now = matrix(c(W1.next, W2.next))
+    b.now = b.next
+    b2.now = matrix(c(b2_1.next, b2_2.next))
+    b1.now = b1.next
+    B.now[1, ] = B1.next
+    B.now[2, ] = B2.next
+
+    A.now[1, ] = A1.next
+    A.now[2, ] = A2.next
+
+    W.now[1, ] = W1.next
+    W.now[2, ] = W2.next
+    iters = iters + 1
+}
+xvals <- seq(1, iters, length = 1000)
+plot(xvals, cost[xvals], geom="line", main="LSE", xlab="iteration", type = "l")
+```
+
+
+
+
+
+

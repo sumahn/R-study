@@ -1,11 +1,25 @@
 ---
-title: "MCMC_HW2"
+title: "MCMC_HW3"
 author: "Suman"
-date: "03/17/2021"
+date: "`r format(Sys.Date())`"
 output:
-  pdf_document: default
   html_document:
-    theme: readable
+    fig_height: 6
+    fig_width: 10
+    highlight: textmate
+    theme: cosmo
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  output:
+  pdf_document:
+    fig_height: 6
+    fig_width: 10
+    toc: no
+  word_document:
+    fig_height: 6
+    fig_width: 9
+    toc: no
 ---
 
 
@@ -15,91 +29,173 @@ knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
 ```
 
+## Importance Sampling  
 
-### [HW 1] Generate 10,000 samples from Weibull(3, 0.3) and draw the histogram.
+  
+### [Example 2]
 
-Let $X \sim Weibull(\lambda, k)$ and $u \sim Unif(0,1)$.  
-Then by using inverse-cdf method, we can get $$x = \lambda[-log(1-u)]^\frac{1}{k}$$
-    
-And using this fact, we can get the result below.
-
-```{r Weibull distribution}
-lambda = 3 ; k = 0.3
-u = runif(10000)
-x = lambda*(-log(1-u))^(1/k)
-hist(x, nclass=500, xlim= c(0, 300),main="Histogram of 10,000 samples from Weibull(3, 0.3)")
-```
-
-
-### [HW 2] Polar Methods for Generating Normal random variables.
-
-Let X and Y follows standard normal distribution. Let $r$ and $\theta$ denote the polar coordinate of the vector $(X,Y)$. $$r^2 = X^2 + Y^2\quad tan\theta = \frac{Y}{X}$$
-    
-Since X and Y are independent, the joint density of X and Y is 
-$$f(x,y) = \frac{1}{2\pi}e^{-\frac{(x^2+y^2)}{2}}$$
-    
-Using polar method, X and Y can be expressed as $rcos\theta, rsin\theta$ respectively. 
-$$x^2+y^2 = r^2cos^2\theta + r^2sin^2\theta = r^2$$
-    
-Therefore, $f(x,y)$ is transformed to $f(r,\theta)$
-$$f(r, \theta) = \frac{1}{2\pi}\times\frac{1}{2}e^{-\frac{r^2}{2}}$$
-    
-And we can think that $\frac{1}{2\pi}$ as the distribution of $\theta$ and it follows $Unif(0,2\pi)$ and $r^2 \sim exp(\frac{1}{2})$
-    
-By inverse-CDF method, let $u \sim Unif(0,1)$. Then we can the result below.
-$$\theta = 2\pi u,\quad r = \sqrt{-2logu}$$
-
-$$
 \begin{aligned}
-x = \sqrt{-2logu_1}cos2\pi u_2 \\
-y = \sqrt{-2logu_1}sin2\pi u_2
-\end{aligned}
 $$
-    
-```{r polar method for generating normal r.v.}
-u1 = runif(10000)
-u2 = runif(10000)
-r = sqrt(-2*log(u1))
-theta = 2*pi*u2
-x = r*cos(theta)
-y = r*sin(theta)
-
-# histogram
-hist(c(x,y), nclass=100, main="Sampling result using polar method")
-```
-
-
-### [HW 3] 
-
-
-
-**(1) Find a density for that ARMS is applicable**  
-
-I will use t-mixture distribution in this section.    
+h(x) = x^2 \\
+f(x) = \frac{1}{2}e^{-|x|} \\
+g(x) \sim N(0,1)
+$$
+\end{aligned}  
   
-$$ x \sim 0.3t(1) + 0.7t(4)$$
+**Evaluate $E[h(x)] = \int_{-\infty}^{\infty}h(x)f(x)dx$ using importance sampling.**
 
 
-**(2) Apply arms command in armspp package**
+```{r example 2}
+# h(x)
+h <- function(x) x^2
 
-```{r arms}
-library(armspp)
-
-# mixture of t distributions
-dtmixture <- function(x) {
-    parts <- log(c(0.3, 0.7)) + dt(x, df=c(1,4), log=TRUE)
-    log(sum(exp(parts - max(parts)))) + max(parts)
+# w(x) = f(x) / g(x)
+w <- function(x) {
+  (1/2*exp(-abs(x))) / ((1/sqrt(2*pi))*exp(-x^2/2))
 }
-curve(exp(Vectorize(dtmixture)(x)), -10, 10)
+
+# Sample X from g(x)
+x <- rnorm(1e6, 0, 1)
+
+# Calculate weight
+unstd.w <- w(x)
+std.w <- unstd.w / sum(unstd.w)
+
+# Calculate E(h(x))
+unstd.is <- mean(h(x)*unstd.w)
+std.is <- sum(h(x) * std.w)
 ```
 
-
-**(3) Generate results**  
+We can get an estimated result 1.6772  
   
-```{r results}
-samples <- arms(1000, dtmixture, -1000, 1000)
-hist(samples, freq=FALSE, nclass = 100, main="Histogram of mixture of t-distributions")
-curve(exp(Vectorize(dtmixture)(x)),-10,10,col="red", add=TRUE)
+
+### [Example 4]
+
+Suppose $f(x) \sim N(0,1)$. Using $g(x) \sim N(0,1)$ and importance sampling, estimate $E_{f}[I_{x \geq 20}]$.
+
+
+```{r example 4-1}
+# w(x) = f(x) / g(x)
+w <- function(x){
+  (exp(-x^2/2)) / exp(-(x-20)^2/2)
+}
+
+# Sample X from g(x)
+x <- rnorm(1e6, 20, 1)
+h <- x[x>=20]
+
+# Calculate weight
+s.weight <- w(h)
+
+# Calculate E[I{X>=20}]
+est.is <- sum(s.weight) / 1e6
+print(est.is)
+```
+  
+  
+I made another codes for calculating estimators.
+
+```{r example 4-2}
+nsim = 10
+prob = rep(NA, nsim)
+w <- function(x){
+  (exp(-x^2/2)) / exp(-(x-20)^2/2)
+}
+
+for(i in 1:nsim){
+  x <- rnorm(10000, 20, 1)
+  prob[i] = sum(w(x[x>=20]))/10000 
+}
+
+mean(prob)
 ```
 
+  
+They showed almost same results, very very small values. 
 
+  
+  
+## Antithetic Sampling
+
+  
+### [Example 2]
+  
+  
+Antithetic sampling is a method for reducing variance of estimators using 2 negatively correlated estimators. In this section, I will use $u \sim unif(0,1), \quad 1-u \sim unif(0,1)$. Then, the two estimators have identical distribution and negatively correlated.
+
+Look at R-code.
+```{r as.example 2}
+# setup
+x <- seq(0.1, 2.5, by=0.1)
+n <- 10000
+nrep <- 100
+cdf <- matrix(NA, nrep, length(x))
+cdf.as <- matrix(NA, nrep, length(x))
+
+## Monte Carlo
+for(i in 1:nrep){
+  for(j in 1:length(x)){
+    u <- runif(n)
+    theta <- x[j]*exp(-0.5*(u*x[j])^2)
+    cdf[i,j] <- 0.5 + mean(theta) / sqrt(2*pi)
+  }
+}
+est.mc <- apply(cdf, 2, mean)
+var.mc <- apply(cdf, 2, var)
+
+## Antithetic Sampler 
+for(i in 1:nrep){
+  for(j in 1:length(x)){
+    u <- runif(n)
+    v <- c(u, 1-u)
+    theta <- x[j]*exp(-(v*x[j])^2 / 2)
+    cdf.as[i,j] <- 0.5 + mean(theta) / sqrt(2*pi)
+  }
+}
+
+est.as <- apply(cdf.as, 2, mean)
+var.as <- apply(cdf.as, 2, var)
+print(rbind(est.mc, est.as, var.mc, var.as))
+print((var.mc - var.as) / var.mc)
+```
+
+The result shows that the variance of estimators of antithetic sampler is less than that of monte carlo sampler.
+
+
+## Control Variates
+
+### [Example 2]  
+  
+Compute $\int_{0}^{1}\frac{e^{-x}}{1+x^2}dx$ using control variate. And we set $g(x) = \frac{e^{-0.5}}{1+x^2}$.
+  
+$\theta = E[g(u)] = e^{-0.5}\int_{0}^{1}\frac{1}{1+x^2}dx = \frac{e^{-0.5}\pi}{4}$
+  
+
+
+```{r control variates}
+m = 10000
+nsim = 100
+mc = rep(NA, nsim)
+cv = rep(NA, nsim)
+
+for(i in 1:nsim){
+  x = runif(m)
+  a = exp(-x) / (1+x^2)
+  b = exp(-0.5) / (1 + x^2)
+  lambda = - cov(a, b) / var(b)
+  mc[i] = mean(a)
+  cv[i] = mc[i] + lambda*(mean(b) - exp(-0.5)*pi/4)
+}
+
+var(mc)
+var(cv)
+
+(var(mc) - var(cv)) / var(mc)
+```
+
+The variance of control variate estimator is less than that of monte carlo estimator
+
+
+## Sampling Importance Resampling
+  
+### [Example]  

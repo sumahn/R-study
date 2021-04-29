@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>k Nearest Neighbor Algorithm</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Sumahn Cha" />
+    <meta name="date" content="2021-04-29" />
+    <script src="libs/header-attrs-2.7/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# k Nearest Neighbor Algorithm
+### Sumahn Cha
+### DeepLearning Study
+### 2021-04-29
+
+---
+
+# Introduction
+
+- kNN is a model that predicts new data based on the information of the nearest neighbor among existing data when new data is given. 
+
+- When new data comes in, neighbors are selected by measuring the distance between the existing data. So, there are no steps for  learning literally.
+
+- Instance based learning / Lazy learning
+---
+# Introduction
+
+![image 1](C:/Users/sm/Documents/R projects/R-study/knn.jpg)
+
+---
+# Two points
+
+- ***How define "the nearest"***
+
+
+- ***How determine k***
+
+
+---
+# How to define "the nearest": Distance
+
+
+### Euclidean Distance
+`$$d_{(X,Y)}=\sqrt{(x_1-y_1)^2+\cdots+(x_n-y_n)^2}$$`
+
+
+```r
+euclidean_distance = function(x, y){
+  if(length(x) == length(y)){
+    sqrt(sum((x-y)^2))
+  }
+  else {stop("Vectors should be of the same length")}
+}
+```
+---
+# Distance 
+### Manhattan Distance
+
+
+`$$d_{(X,Y)}=\sum_{i=1}^{n}|x_i-y_i|$$`
+
+
+```r
+manhattan_distance = function(x,y){
+  if(length(x) == length(y)){
+    sum(abs(x-y))
+  }
+  else stop("Vectors should be of the same length")
+}
+```
+---
+# Distance
+
+### Mahalanobis Distance
+`$$d_{(X,Y)}=\sqrt{(\vec{X}-\vec{Y})^T\Sigma^{-1}(\vec{X}-\vec{Y})}$$`
+
+- Let the Mahalanobis distance `\(c\)`, `\(X=(x_1,x_2)\)`, `\(Y=(0,0)\)`. Then 
+`$$x_1^2s_1+2x_1x_2s_2+x_2^2s_2=c^2$$`
+`$$\Sigma^{-1}=\mbox{}\left[ \begin{array}{cc}s_1&amp;s_2\\s_3&amp;s_4\end{array} \right]$$`
+
+- And this is a form of ellipse equation.
+
+- If `\(\Sigma^{-1}=\mbox{}\left[ \begin{array}{cc}1&amp;0\\0&amp;1\end{array} \right]\)`, 
+`$$d_{Mahalanobis(X,Y)} = d_{Euclidean(X,Y)}$$`
+---
+# Distance
+
+
+```r
+mhn = function(x, y){
+  (as.matrix(x-y))%*%solve(cov(x,y))%*%t(as.matrix(x-y))
+}
+
+x = 1:10
+y = 11:20
+mhn(x, y)
+```
+---
+# Euclidean vs Mahalanobis
+
+![image 2](C:/Users/sm/Documents/R projects/R-study/ecvsmh.jpg)
+
+
+---
+# How to determine k? : Greedy algorithm
+
+
+- Usually determine k by greedy algorithm. It means that try for many cases and determine k which shows the smallest error.
+
+- k determines the number of nearest neighbors, and also affects the decision rule.
+
+- Majority voting / Weighted voting
+
+---
+# Precautions
+
+- First, this algorithm is based on the ***distance***. We should normalize the variables before implementing it.
+
+- In case of imbalanced data, we should consider prior probability of existing data or find suitable threshold in decision process.
+
+---
+# Code
+
+```r
+nearest_neighbors = function(x,obs, k, FUN, p = NULL){
+
+  # Check the number of observations is the same
+  if(ncol(x) != ncol(obs)){
+    stop('Data must have the same number of variables')
+  }
+
+  # Calculate distance, considering p for Minkowski
+  if(is.null(p)){
+    dist = apply(x,1, FUN,obs)  
+  }else{
+    dist = apply(x,1, FUN,obs,p)
+  }
+
+  # Find closest neighbours
+  distances = sort(dist)[1:k]
+  neighbor_ind = which(dist %in% sort(dist)[1:k])
+
+  if(length(neighbor_ind)!= k){
+    warning(
+      paste('Several variables with equal distance. Used k:',length(neighbor_ind))
+    )
+  }
+
+  ret = list(neighbor_ind, distances)
+  return(ret)
+}
+
+x = iris[1:nrow(iris)-1, ]
+obs = iris[nrow(iris), ]
+
+neighbor = nearest_neighbors(x[, 1:4], obs[,1:4], 4, euclidean_distance)[[1]]
+as.matrix(x[neighbor, 1:4])
+```
+
+```
+##     Sepal.Length Sepal.Width Petal.Length Petal.Width
+## 102          5.8         2.7          5.1         1.9
+## 128          6.1         3.0          4.9         1.8
+## 139          6.0         3.0          4.8         1.8
+## 143          5.8         2.7          5.1         1.9
+```
+
+---
+# Code
+
+```r
+knn_prediction = function(x,y, weights = NULL){
+
+  x = as.matrix(x)
+
+  if(is.factor(x[,y]) | is.character(x[,y])){
+    groups = table(x[,y])
+    pred = names(groups[groups == max(groups)])
+  } 
+
+  if(is.numeric(x[,y])){
+
+    # Calculate weighted prediction
+    if(!is.null(weights)){
+      w = 1/weights/ sum(weights)
+      pred = weighted.mean(x[,y], w)
+
+    # Calculate standard prediction  
+    }else{
+      pred = mean(x[,y])
+    }
+
+  }
+
+  # If no pred, then class is not correct
+  if(try(class(x[,y])) == 'try-error'){
+    stop('Y should be factor or numeric.')
+  }
+
+  return(pred)
+
+}
+```
+
+---
+# Code
+
+```r
+knn = function(x_fit, x_pred, y, k, 
+               func = euclidean_distance,weighted_pred = F, p = NULL){
+
+  # Inicilizamos las predicciones
+  predictions = c()
+
+  y_ind = which(colnames(x_pred) == y)
+
+  # Para cada observaciones, obtenemos la prediccion
+  for(i in 1:nrow(x_pred)){
+
+    neighbors = nearest_neighbors(x_fit[,-y_ind], 
+                                  x_pred[i,-y_ind],k,FUN = func)
+
+    if(weighted_pred){
+      pred = knn_prediction(x_fit[neighbors[[1]], ],y, neighbors[[2]])
+    } else{
+      pred = knn_prediction(x_fit[neighbors[[1]], ],y)
+    }
+
+    # If more than 1 predictions, make prediction with 1 more k
+    if(length(pred)&gt;1){
+      pred = knn(x_fit, x_pred[i,],y, k = k+1, 
+                 func = func, weighted_pred = weighted_pred, p == p)
+    }
+
+    predictions[i] = pred
+
+  }
+  return(predictions)
+
+}
+```
+
+
+---
+# Code
+
+```r
+library(caret)
+```
+
+```
+## Loading required package: lattice
+```
+
+```
+## Loading required package: ggplot2
+```
+
+```r
+set.seed(1234)
+
+n_fit = 20
+train_ind = sample(1:nrow(iris),n_fit)
+
+x_fit = iris[-train_ind,]
+x_pred = iris[train_ind,]
+
+predictions = knn(x_fit, x_pred, 'Species', k = 5)
+predictions
+```
+
+```
+##  [1] "setosa"     "versicolor" "virginica"  "virginica"  "virginica" 
+##  [6] "virginica"  "virginica"  "virginica"  "versicolor" "virginica" 
+## [11] "versicolor" "versicolor" "versicolor" "virginica"  "setosa"    
+## [16] "virginica"  "versicolor" "setosa"     "virginica"  "setosa"
+```
+
+---
+#Code
+
+```r
+predictions = factor(predictions, levels = levels(x_pred$Species))
+
+confusionMatrix(as.factor(predictions), x_pred$Species)
+```
+
+```
+## Confusion Matrix and Statistics
+## 
+##             Reference
+## Prediction   setosa versicolor virginica
+##   setosa          4          0         0
+##   versicolor      0          6         0
+##   virginica       0          0        10
+## 
+## Overall Statistics
+##                                      
+##                Accuracy : 1          
+##                  95% CI : (0.8316, 1)
+##     No Information Rate : 0.5        
+##     P-Value [Acc &gt; NIR] : 9.537e-07  
+##                                      
+##                   Kappa : 1          
+##                                      
+##  Mcnemar's Test P-Value : NA         
+## 
+## Statistics by Class:
+## 
+##                      Class: setosa Class: versicolor Class: virginica
+## Sensitivity                    1.0               1.0              1.0
+## Specificity                    1.0               1.0              1.0
+## Pos Pred Value                 1.0               1.0              1.0
+## Neg Pred Value                 1.0               1.0              1.0
+## Prevalence                     0.2               0.3              0.5
+## Detection Rate                 0.2               0.3              0.5
+## Detection Prevalence           0.2               0.3              0.5
+## Balanced Accuracy              1.0               1.0              1.0
+```
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

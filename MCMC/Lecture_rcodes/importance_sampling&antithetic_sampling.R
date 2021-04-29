@@ -59,7 +59,7 @@ mean(prob)
 x = rexp(1e6, 1) + 4.5
 w = dnorm(x, 0, 1) / dexp(x-4.5,1)
 
-## Monte Carlo extimates
+## Monte Carlo estimates
 mean(w)
 
 
